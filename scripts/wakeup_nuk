@@ -1,0 +1,2 @@
+#!/bin/bash
+wakeonlan c0:3f:d5:8f:6c:b9
