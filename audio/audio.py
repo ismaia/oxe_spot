@@ -2,14 +2,9 @@ import dbus
 from gi.repository import GLib
 
 
-class AudioService:
-    def __init__(self):
-        pass
     
-    def add_mixer(self,name, phy_device):
+class AudioService:
+    def __init__(self, dev_name):
         pass
 
-    def combine_sinks(self):
-        pass
-    
 
