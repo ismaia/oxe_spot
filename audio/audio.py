@@ -4,12 +4,12 @@ from gi.repository import GLib
 
 class AudioService:
     def __init__(self):
-        print('--')
+        pass
     
     def add_mixer(self,name, phy_device):
-        print('--')
+        pass
 
-    def combine_sinks():
-        print(--)
+    def combine_sinks(self):
+        pass
     
 
