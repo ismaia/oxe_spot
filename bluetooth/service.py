@@ -17,15 +17,19 @@ class BtService:
             ad = adapter.Adapter(a)
             self.adapter_alias_dict[ad.alias] = ad
             self.adapter_addr_dict[ad.address] = ad
-            ad.on_device_found = self._on_device_found
-            ad.on_device_found = self._on_device_connect
-            ad.on_device_found = self._on_device_disconnect
             
         self.device_alias_dict = {}
         self.device_addr_dict = {}
         for d in list(device.Device.available()):
             self.device_alias_dict[d.alias] = d
             self.device_addr_dict[d.address] = d
+
+
+    def get_adapter(self,hci_name):
+        for ad in self.adapter_addr_dict.values():
+            if hci_name in ad.path:
+                return ad
+        
 
     
 
@@ -53,33 +57,32 @@ class BtService:
             else:
                print( d.alias ,'(' , d.address ,') => (' , d.address , ')' )
     
-    def connect_device(self, dev_id, adapter_alias):
+    def connect_device(self, dev_alias, adapter_alias):
         adapter = None
         if adapter_alias in self.adapter_alias_dict:
             adapter = self.adapter_alias_dict[adapter_alias]
-            print('Connecting device :', dev_id , '=>' ,  adapter.alias , '(' , adapter.address , ')' )
+            print('Connecting device :', dev_alias , '=>' ,  adapter.alias , '(' , adapter.address , ')' )
         else:
             print('Error: Adapter not found: ', adapter_alias)
             return
-        print(self.device_alias_dict[dev_id].adapter , adapter.address )
+        print(self.device_alias_dict[dev_alias].adapter , adapter.address )
 
         
-        if self.device_alias_dict[dev_id].adapter == adapter.address:
-          print('Device', dev_id , 'is available on ' , adapter.alias)
+        if self.device_alias_dict[dev_alias].adapter == adapter.address:
+          print('Device', dev_alias , 'is available on ' , adapter.alias)
         else:
-          print('Device', dev_id , 'is not available on ' , adapter.alias)
-          self._discovery(dev_id, adapter_alias)
+          print('Device', dev_alias , 'is not available on ' , adapter.alias)
+          self._discovery(dev_alias, adapter_alias)
           
 
-    def _discovery(self, dev_id, adapter_alias):
+    def _discovery(self, dev_alias, adapter_alias):
         if adapter_alias not in self.adapter_alias_dict:
             print('Adapter not found:',  adapter_alias)
             return
-        print('Discover :' ,dev_id)
+        print('Discover :' ,dev_alias)
         ad = self.adapter_alias_dict[adapter_alias]
+        ad.on_device_found = self._on_device_found
         ad.nearby_discovery()
-        
-
         
                 
     def _on_device_found(self,dev):
@@ -93,8 +96,8 @@ class BtService:
 
 
         # for d in self.device_list:
-        #     if d.alias == dev_id:
-        #         print('Connecting device [', dev_id ,' - ', d.address , '] ...')
+        #     if d.alias == dev_alias:
+        #         print('Connecting device [', dev_alias ,' - ', d.address , '] ...')
         #         if not d.paired:
         #             pass
 
