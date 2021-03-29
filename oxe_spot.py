@@ -5,8 +5,8 @@ import time
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 
-from bluetooth.service import BtService
-from bluezero import adapter
+from bluetooth.bt_service import BtService
+
 
 def signal_handler(sig, frame):
     print('done')
