@@ -50,7 +50,7 @@ def dev_added_callback(dev):
 
 if __name__ == '__main__':
     
-    print('OXE Spot\n')
+    print('OXE Spot')
     # DBusGMainLoop(set_as_default=True)
 
     bt_adapter_main='oxe_spot'
@@ -60,12 +60,15 @@ if __name__ == '__main__':
 
     bt_service.set_adapter_alias('hci0', bt_adapter_main)
     bt_service.set_adapter_alias('hci1', bt_adapter_a2dp_port1)    
-    print('adapters:')
-    bt_service.list_available_adapters()    
-    print('devices list:')
-    bt_service.list_available_devices()    
-    print('--')
-    bt_service.connect_device('SoundCore 2', bt_adapter_a2dp_port1)
+
+    print('Devices on adapter :' , bt_adapter_main)
+    for d in bt_service.get_devices(bt_adapter_main):
+        print('name=' , d.alias)
+    
+    print('Paired devices on adapter :' , bt_adapter_main)
+    for d in bt_service.get_paired_devices(bt_adapter_main):
+        print('name=' , d.alias)
+
 
     loop = GLib.MainLoop()
     loop.run()    
