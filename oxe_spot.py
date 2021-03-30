@@ -1,3 +1,4 @@
+import logging
 import sys
 import dbus
 import signal
@@ -7,50 +8,22 @@ from gi.repository import GLib
 
 from bluetooth.bt_service import BtService
 
+logging.basicConfig(level=logging.DEBUG, format='%(name)s :: %(message)s')
+logger = logging.getLogger(name='oxe_spot')
 
 def signal_handler(sig, frame):
-    print('done')
+    logger.info('done')
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
 
-def test_adapter_rename():
-    bt_adapter_main='ad_main1'
-    bt_adapter_a2dp_port1='a2dp_port1'
-
-    print('available adapters:')
-    bt_service.list_available_adapters()    
-    print('renaming adapters...')
-    bt_service.set_adapter_alias('hci0', bt_adapter_main)
-    bt_service.set_adapter_alias('hci1', bt_adapter_a2dp_port1)    
-    print('adapters after rename:')
-    bt_service.list_available_adapters()    
-    print('devices list:')
-    bt_service.list_available_devices()    
-    print('--')
-    print('--')
-
-    bt_adapter_main='ad_main2'
-    bt_adapter_a2dp_port1='a2dp_port2'
-
-    print('available adapters:')
-    bt_service.list_available_adapters()    
-    print('renaming adapters...')
-    bt_service.set_adapter_alias('hci0', bt_adapter_main)
-    bt_service.set_adapter_alias('hci1', bt_adapter_a2dp_port1)    
-    print('adapters after rename:')
-    bt_service.list_available_adapters()    
-    print('devices list:')
-    bt_service.list_available_devices()    
-    print('--')
 
 def dev_added_callback(dev):
     print(dev.address , " " , dev.alias)
 
 
 if __name__ == '__main__':
-    
-    print('OXE Spot')
+    logger.info('Ready')
     # DBusGMainLoop(set_as_default=True)
 
     bt_adapter_main='oxe_spot'
@@ -61,14 +34,16 @@ if __name__ == '__main__':
     bt_service.set_adapter_alias('hci0', bt_adapter_main)
     bt_service.set_adapter_alias('hci1', bt_adapter_a2dp_port1)    
 
-    print('Devices on adapter :' , bt_adapter_main)
-    for d in bt_service.get_devices(bt_adapter_main):
-        print('name=' , d.alias)
-    
-    print('Paired devices on adapter :' , bt_adapter_main)
-    for d in bt_service.get_paired_devices(bt_adapter_main):
-        print('name=' , d.alias)
 
+    logger.info('Devices on adapter [' + bt_adapter_main + '] .....:')
+    for d in bt_service.get_devices(bt_adapter_main):
+        logger.info(d.alias + ' : ' + d.address)
+    
+    logger.info('Paired devices on adapter [' + bt_adapter_main + '] .....:')
+    for d in bt_service.get_paired_devices(bt_adapter_main):
+        logger.info(d.alias + ' : ' + d.address)
+
+    bt_service.connect_device('SoundCore 2', bt_adapter_a2dp_port1)
 
     loop = GLib.MainLoop()
-    loop.run()    
+    loop.run()

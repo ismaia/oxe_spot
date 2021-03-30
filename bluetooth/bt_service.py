@@ -1,11 +1,14 @@
 import dbus
-from gi.repository import GLib
 import time
+import logging
 
-from bluezero import adapter
-from bluezero import device
-from bluezero import tools
+from bluezero      import adapter
+from bluezero      import device
+from bluezero      import tools
+from gi.repository import GLib
 
+logging.basicConfig(level=logging.DEBUG, format='%(name)s :: %(message)s')
+logger = logging.getLogger(name='bt_service')
 
 
 class BtService:
@@ -56,23 +59,60 @@ class BtService:
                 ad.alias = alias #set its new name
                 time.sleep(0.2) #wait dbus transaction
                 break
-        
-    def list_available_adapters(self):
-        for ad in list(adapter.Adapter.available()):
-            print( ad.alias ,'(' , ad.address ,')' )
-
-    def list_available_devices(self):
-        for d in list(device.Device.available()):
-            print( d.alias ,'(' , d.address ,')' )
+                
 
     
-    def connect_device(self, dev_alias, adapter_alias, attempts=5):    
-        pass    
-        # def _scan_device(self, dev_alias, adapter_alias, attempts=5):
-        #     target_dev = None
-        #     def _on_device_found(self,dev):        
-        #         if dev.alias == dev_alias:
-        #             target_dev = dev
+    def connect_device(self, dev_alias, adapter_alias, attempts=8):    
+        target_dev=None
+        adapter = self.get_adapter(adapter_alias)
+        if adapter == None:
+            logger.error('Invalid adapter [ ' + adapter_alias + ' ]' )
+            return
+
+        def _scan_target_device():
+            logger.info('Scanning...')
+            def _on_device_found(self,dev):        
+                if dev.alias == dev_alias:
+                    nonlocal target_dev
+                    target_dev = dev
+                
+            adapter._on_device_found = _on_device_found
+            adapter.nearby_discovery(timeout=10)
+
+        def _pair_target_device():
+            if target_dev.paired:
+                return
+            logger.info('Pairing...')
+            target_dev.pair()
+
+
+        cnt=0
+        while cnt < attempts:
+            cnt +=1 
+
+            target_dev = self.get_device(dev_alias,adapter_alias)            
+            logger.info('Trying to connect device [ ' + dev_alias + ' ], attempt ' + str(cnt) +' of ' + str(attempts))
+                    
+            if target_dev == None:
+                _scan_target_device()
+            else: #found target_dev
+                logger.info('Device ' + target_dev.alias + ' found on adapter [ ' + adapter.alias + ' ]' )
+                _pair_target_device()
+                target_dev.connect()
+                if target_dev.paired and target_dev.connected:
+                    logger.info('Device [ ' + target_dev.alias + ' ] connected !')
+                    return
+        
+        if cnt == attempts:
+            logger.info('Cant find target device [ ' + dev_alias + ' ]' )
+
+            
+
+
+
+                
+            
+
 
         # def _pair_device(self,dev_alias, attempts=4):
         #     pass
