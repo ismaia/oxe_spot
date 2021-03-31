@@ -6,9 +6,10 @@ import time
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 
-from bluetooth.oxe_bt_service import OxeBtService
+from bluetooth.bt_service import BtService
+from audio.audio_service import AudioService
 
-#TODO: set per module formatting
+
 logging.basicConfig(level=logging.DEBUG, format='%(name)s :: %(message)s')
 logger = logging.getLogger(name='oxe_spot')
 
@@ -19,27 +20,22 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 
-def dev_added_callback(dev):
-    print(dev.address , " " , dev.alias)
+# def bt_speaker_connect_test():
+#     logger.info('')
+#     logger.info('Devices on adapter [' + bt_adapter_main + '] ')
+#     for d in bt_service.adapter_get_devices_list(bt_adapter_main):
+#         logger.info(d.alias + ' : ' + d.address)
+#     logger.info('')
+#     logger.info('Paired devices on adapter [' + bt_adapter_main + '] ')
+#     for d in bt_service.adapter_get_paired_devices_list(bt_adapter_main):
+#         logger.info(d.alias + ' : ' + d.address)
 
+#     bt_service.device_disconnect(bt_speaker1)
+#     bt_service.device_disconnect(bt_speaker2)
 
-def bt_speaker_connect_test():
-    logger.info('')
-    logger.info('Devices on adapter [' + bt_adapter_main + '] ')
-    for d in bt_service.adapter_get_devices_list(bt_adapter_main):
-        logger.info(d.alias + ' : ' + d.address)
-    logger.info('')
-    logger.info('Paired devices on adapter [' + bt_adapter_main + '] ')
-    for d in bt_service.adapter_get_paired_devices_list(bt_adapter_main):
-        logger.info(d.alias + ' : ' + d.address)
-
-    bt_service.device_disconnect(bt_speaker1)
-    bt_service.device_disconnect(bt_speaker2)
-
-    bt_service.device_connect(bt_speaker1, bt_adapter_a2dp_port1)
-    bt_service.device_disconnect(bt_speaker1)
-    bt_service.device_connect(bt_speaker2, bt_adapter_a2dp_port1)
-
+#     bt_service.device_connect(bt_speaker1, bt_adapter_a2dp_port1)
+#     bt_service.device_disconnect(bt_speaker1)
+#     bt_service.device_connect(bt_speaker2, bt_adapter_a2dp_port1)
 
 
 
@@ -52,7 +48,7 @@ if __name__ == '__main__':
     bt_speaker1='SoundCore 2'
     bt_speaker2='MEGABOOM 3'
 
-    bt_service = OxeBtService()
+    bt_service = BtService()
 
     bt_adpter_test='oxe_spot_test'
     bt_service.adapter_on('hci0')
@@ -61,8 +57,10 @@ if __name__ == '__main__':
     bt_service.adapter_off('hci0')
     bt_service.adapter_set_alias('hci1', bt_adpter_test)
     bt_service.adapter_discoverable(bt_adpter_test)
-    
 
+    audio_service = AudioService()
+    audio_service.start_source_volume_monitor()
+    
     
     loop = GLib.MainLoop()
     loop.run()
