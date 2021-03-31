@@ -69,8 +69,8 @@ class BtAgentService(dbus.service.Object):
 	@dbus.service.method(AGENT_INTERFACE,
 					in_signature="o", out_signature="u")
 	def RequestPasskey(self, device):
-		logger.info('RequestPasskey :' + str(device))
-		return dbus.UInt32("password")
+		logger.info('RequestPasskey :' + str(device))		
+		return dbus.UInt32('0000')
 
 	@dbus.service.method(AGENT_INTERFACE,
 					in_signature="ouq", out_signature="")
