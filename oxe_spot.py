@@ -8,7 +8,7 @@ from gi.repository import GLib
 
 from bluetooth.oxe_bt_service import OxeBtService
 
-
+#TODO: set per module formatting
 logging.basicConfig(level=logging.DEBUG, format='%(name)s :: %(message)s')
 logger = logging.getLogger(name='oxe_spot')
 
@@ -26,19 +26,21 @@ def dev_added_callback(dev):
 def bt_speaker_connect_test():
     logger.info('')
     logger.info('Devices on adapter [' + bt_adapter_main + '] ')
-    for d in bt_service.get_devices(bt_adapter_main):
+    for d in bt_service.adapter_get_devices_list(bt_adapter_main):
         logger.info(d.alias + ' : ' + d.address)
     logger.info('')
     logger.info('Paired devices on adapter [' + bt_adapter_main + '] ')
-    for d in bt_service.get_paired_devices(bt_adapter_main):
+    for d in bt_service.adapter_get_paired_devices_list(bt_adapter_main):
         logger.info(d.alias + ' : ' + d.address)
 
-    bt_service.disconnect_device(bt_speaker1)
-    bt_service.disconnect_device(bt_speaker2)
+    bt_service.device_disconnect(bt_speaker1)
+    bt_service.device_disconnect(bt_speaker2)
 
-    bt_service.connect_device(bt_speaker1, bt_adapter_a2dp_port1)
-    bt_service.disconnect_device(bt_speaker1)
-    bt_service.connect_device(bt_speaker2, bt_adapter_a2dp_port1)
+    bt_service.device_connect(bt_speaker1, bt_adapter_a2dp_port1)
+    bt_service.device_disconnect(bt_speaker1)
+    bt_service.device_connect(bt_speaker2, bt_adapter_a2dp_port1)
+
+
 
 
 if __name__ == '__main__':
@@ -46,15 +48,20 @@ if __name__ == '__main__':
     DBusGMainLoop(set_as_default=True)
 
     bt_adapter_main='oxe_spot'
-    bt_adapter_a2dp_port1='a2dp_port1'
+    bt_adapter_a2dp_port1='oxe_spot1'
     bt_speaker1='SoundCore 2'
     bt_speaker2='MEGABOOM 3'
 
     bt_service = OxeBtService()
 
-    bt_service.set_adapter_alias('hci0', bt_adapter_main)
-    bt_service.set_adapter_alias('hci1', bt_adapter_a2dp_port1)    
-    bt_service.set_adapter_pairable(bt_adapter_a2dp_port1)
+    bt_adpter_test='oxe_spot_test'
+    bt_service.adapter_on('hci0')
+    bt_service.adapter_on('hci1')
+    bt_service.adapter_set_alias('hci0', bt_adapter_main)
+    bt_service.adapter_off('hci0')
+    bt_service.adapter_set_alias('hci1', bt_adpter_test)
+    bt_service.adapter_discoverable(bt_adpter_test)
+    
 
     
     loop = GLib.MainLoop()
