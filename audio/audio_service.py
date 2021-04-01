@@ -10,7 +10,14 @@ class AudioService:
     def __init__(self):
         self.bus = dbus.SystemBus()
         self.source_vol = 0
+
+    def start(self):
+        pass
     
+    def stop(self):
+        pass
+
+
     def start_source_volume_monitor(self):
         logger.info('Source volume monitor')
         def volume_changed_handler(interface, changed, invalidated, path):

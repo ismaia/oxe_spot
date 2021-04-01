@@ -8,7 +8,7 @@ from gi.repository import GObject
 
 logger = logging.getLogger(name='oxe_bt_agent')
 
-
+BUS_NAME = 'org.bluez'
 AGENT_INTERFACE = "org.bluez.Agent1"
 AGENT_PATH = "/oxe_spot/bt_agent"
 
