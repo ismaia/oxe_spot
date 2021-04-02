@@ -14,10 +14,8 @@ logging.basicConfig(level=logging.DEBUG, format='%(name)s :: %(message)s')
 logger = logging.getLogger(name='oxe_spot')
 
 
-bt_service = BtService()
-audio_service = AudioService()
-audio_service.start_source_volume_monitor()
-
+bt_service = BtService.instance()
+audio_service = AudioService.instance()
 
 
 def signal_handler(sig, frame):
@@ -38,8 +36,7 @@ if __name__ == '__main__':
     hci1='hci1'
     
     hci0_name='oxe_spot'
-    hci1_name='oxe_spot'
-    hci1_name_test='oxe_spot_test'
+    hci1_name='a2dp_port1'    
 
     bt_speaker1='SoundCore 2'
     bt_speaker2='MEGABOOM 3'
@@ -48,10 +45,12 @@ if __name__ == '__main__':
     bt_service.adapter_on(hci0)
     bt_service.adapter_on(hci1)
     bt_service.adapter_set_alias(hci0, hci0_name)    
-    bt_service.adapter_set_alias(hci1, hci1_name_test)
+    bt_service.adapter_set_alias(hci1, hci1_name)
     
-    bt_service.adapter_set_discoverable(hci1)
+    
+    bt_service.adapter_set_discoverable(hci0)    
     bt_service.discover_and_connect(bt_speaker2, hci1)
+    bt_service.discover_and_connect(bt_speaker1, hci0)
     
     loop = GLib.MainLoop()
     loop.run()

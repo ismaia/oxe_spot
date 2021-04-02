@@ -13,8 +13,20 @@ logger = logging.getLogger(name='bt_service')
 
 
 class BtService:
+    __instance = None
+    @staticmethod 
+    def instance():
+        """ Static access method. """
+        if BtService.__instance == None:
+            BtService()
+        return BtService.__instance
 
     def __init__(self):
+        if BtService.__instance != None:
+            raise Exception("This class is a singleton!")
+        else:
+            BtService.__instance = self
+            
         try:        
             for ad in list(adapter.Adapter.available()):
                 ad.on_connect = self._on_device_connect

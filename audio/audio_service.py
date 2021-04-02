@@ -7,9 +7,23 @@ import threading
 logger = logging.getLogger(name='audio_service')
     
 class AudioService:
+    __instance = None
+    @staticmethod 
+    def instance():
+        """ Static access method. """
+        if AudioService.__instance == None:
+            AudioService()
+        return AudioService.__instance
+
     def __init__(self):
+        if AudioService.__instance != None:
+            raise Exception("This class is a singleton!")
+        else:
+            AudioService.__instance = self
+
         self.bus = dbus.SystemBus()
         self.source_vol = 0
+        self.source_volume_monitor()
 
     def start(self):
         pass
@@ -18,7 +32,7 @@ class AudioService:
         pass
 
 
-    def start_source_volume_monitor(self):
+    def source_volume_monitor(self):
         logger.info('Source volume monitor')
         def volume_changed_handler(interface, changed, invalidated, path):
             if 'Volume' in changed:
