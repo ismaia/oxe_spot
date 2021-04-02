@@ -12,6 +12,7 @@ BUS_NAME = 'org.bluez'
 AGENT_INTERFACE = "org.bluez.Agent1"
 AGENT_PATH = "/oxe_spot/bt_agent"
 
+UUID_HFP_HS='0000111e-0000-1000-8000-00805f9b34fb'
 UUID_HSP_HS='00001108-0000-1000-8000-00805f9b34fb'
 UUID_ADVANCED_AUDIO='0000110d-0000-1000-8000-00805f9b34fb'
 UUID_A2DP_SOURCE='0000110a-0000-1000-8000-00805f9b34fb'
@@ -31,7 +32,7 @@ class BtAgentService(dbus.service.Object):
 			manager.RegisterAgent(AGENT_PATH, "NoInputNoOutput")	
 			manager.RequestDefaultAgent(AGENT_PATH)
 
-			self.authorized_uuids=[UUID_ADVANCED_AUDIO, UUID_HSP_HS, UUID_A2DP_SOURCE, UUID_A2DP_SINK]		
+			self.authorized_uuids=[UUID_ADVANCED_AUDIO, UUID_HSP_HS, UUID_HFP_HS,UUID_A2DP_SOURCE, UUID_A2DP_SINK]
 			logger.info("Audio profiles authorized")
 
 		except:

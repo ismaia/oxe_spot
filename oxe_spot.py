@@ -42,15 +42,16 @@ if __name__ == '__main__':
     bt_speaker2='MEGABOOM 3'
     
 
-    bt_service.adapter_on(hci0)
-    bt_service.adapter_on(hci1)
-    bt_service.adapter_set_alias(hci0, hci0_name)    
-    bt_service.adapter_set_alias(hci1, hci1_name)
+    # bt_service.adapter_on(hci0)
+    # bt_service.adapter_on(hci1)
+    # bt_service.adapter_set_alias(hci0, hci0_name)    
+    # bt_service.adapter_set_alias(hci1, hci1_name)
     
     
-    bt_service.adapter_set_discoverable(hci0)    
-    bt_service.discover_and_connect(bt_speaker2, hci1)
-    bt_service.discover_and_connect(bt_speaker1, hci0)
+    # bt_service.adapter_set_discoverable(hci0)        
+    # #bt_service.discover_and_connect(bt_speaker1, hci0)
+    # bt_service.discover_and_connect(bt_speaker2, hci1)
+
     
     loop = GLib.MainLoop()
     loop.run()
