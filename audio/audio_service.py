@@ -26,12 +26,17 @@ class AudioService:
         self.bus = dbus.SystemBus()
         self.source_vol = 0
         self._source_volume_monitor()
+        self.sink1 = ''
+        self.sink2 = ''
 
     def start(self):
         pass
     
     def stop(self):
         pass
+
+
+
 
     def get_default_sink(self):
         cmd="pactl info | grep -i \'default sink\'"
@@ -66,7 +71,7 @@ class AudioService:
         def volume_changed_handler(interface, changed, invalidated, path):
             if 'Volume' in changed:
                 self.source_vol = int(changed['Volume'])
-                pa_vol=self.source_vol*900
+                pa_vol=self.source_vol*1000
                 self.set_default_source_volume(pa_vol)
                 logger.info('Vol changed=%d , pa_volume=%d', self.source_vol, pa_vol )
             

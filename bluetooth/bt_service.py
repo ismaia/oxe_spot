@@ -27,16 +27,9 @@ class BtService:
         else:
             BtService.__instance = self
             
-        try:        
-            for ad in list(adapter.Adapter.available()):
-                ad.on_connect = self._on_device_connect
-                ad.on_disconnect = self._on_device_disconnect
-
-        except:
-            self._log_exception()
-
         agent = BtAgentService()
-        agent.start()                
+        agent.start()
+
     
     def start(self):
         pass
@@ -206,6 +199,7 @@ class BtService:
                 logger.info('Device disconnected : [ %s : %s ]' , dev.alias , dev.address )
         except:
             self._log_exception()        
+
 
 
     def _log_exception(self):
