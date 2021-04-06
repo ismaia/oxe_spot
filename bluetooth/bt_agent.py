@@ -31,9 +31,7 @@ class BtAgentService(dbus.service.Object):
 			manager = dbus.Interface(obj, "org.bluez.AgentManager1")
 			manager.RegisterAgent(AGENT_PATH, "NoInputNoOutput")	
 			manager.RequestDefaultAgent(AGENT_PATH)
-
-			self.authorized_uuids=[UUID_ADVANCED_AUDIO, UUID_HSP_HS, UUID_HFP_HS,UUID_A2DP_SOURCE, UUID_A2DP_SINK]
-			logger.info("Audio profiles authorized")
+			self.authorized_uuids=[UUID_ADVANCED_AUDIO, UUID_HSP_HS, UUID_HFP_HS,UUID_A2DP_SOURCE, UUID_A2DP_SINK]			
 
 		except:
 			self._log_exception()

@@ -26,15 +26,12 @@ class AudioService:
         self.bus = dbus.SystemBus()
         self.source_vol = 0
         self._source_volume_monitor()
-        self.sink1 = ''
-        self.sink2 = ''
 
     def start(self):
         pass
     
     def stop(self):
         pass
-
 
 
 
@@ -64,6 +61,9 @@ class AudioService:
         cmd="pactl set-source-volume " + source + " " + str(vol)
         subprocess.run([cmd], shell=True, check=True, stdout=subprocess.PIPE, universal_newlines=True)
 
+    
+    def combine_sinks(self, sink1,sink2):
+        pass
 
 
     def _source_volume_monitor(self):
@@ -77,10 +77,8 @@ class AudioService:
             
             
         self.bus.add_signal_receiver(volume_changed_handler, 
-                                     bus_name='org.bluez', 
+                                     bus_name='org.bluez',
                                      dbus_interface=dbus.PROPERTIES_IFACE,
                                      signal_name='PropertiesChanged',
                                      path_keyword='path')
 
-    def _sink_monitor(self):
-        pass

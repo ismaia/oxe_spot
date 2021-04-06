@@ -2,6 +2,8 @@ import dbus
 import time
 import logging
 import os, sys, traceback
+import subprocess
+
 
 from bluezero           import adapter
 from bluezero           import device
@@ -35,7 +37,21 @@ class BtService:
         pass
     
     def stop(self):
-        pass
+        pass    
+
+    def get_device_by_addr(self,dev_addr,hci_name):
+        try:
+            adapter = self.adapter_get_instance(hci_name)
+            if adapter == None:
+                return None
+
+            for d in list(device.Device.available()):
+                if dev_addr == d.address and d.adapter == adapter.address:
+                    return d
+            return None
+        except:
+            self._log_exception()
+            return None
 
     def get_device_by_name(self,dev_name,hci_name):
         try:
@@ -51,7 +67,8 @@ class BtService:
             self._log_exception()
             return None
 
-    def discover_and_connect(self, dev_name , hci_name, attempts=8):
+
+    def discover_and_connect(self, dev_addr , hci_name, attempts=8):
         try:
             target_dev=None
             adapter = self.adapter_get_instance(hci_name)
@@ -60,9 +77,9 @@ class BtService:
                 return
 
             def _scan_target_device():
-                logger.info('Scanning [ %s ] ...' , dev_name)
+                logger.info('Scanning [ %s ] ...' , dev_addr)
                 def _on_device_found(self,dev):        
-                    if dev.alias == dev_name:
+                    if dev.address == dev_addr:
                         nonlocal target_dev
                         target_dev = dev
                     
@@ -72,15 +89,15 @@ class BtService:
             def _pair_target_device():
                 if target_dev.paired:
                     return
-                logger.info('Pairing [ %s ] ...' , dev_name)
+                logger.info('Pairing [ %s ] ...' , dev_addr)
                 target_dev.pair()
 
             cnt=0
             while cnt < attempts:
                 cnt +=1 
 
-                target_dev = self.get_device_by_name(dev_name,hci_name)                                
-                logger.info('Trying to connect [ %s ] , attempt %d of %d' , dev_name , cnt ,  attempts)
+                target_dev = self.get_device_by_addr(dev_addr,hci_name)                                
+                logger.info('Trying to connect [ %s ] , attempt %d of %d' , dev_addr , cnt ,  attempts)
                         
                 if target_dev == None:
                     _scan_target_device()
@@ -88,16 +105,22 @@ class BtService:
                     _pair_target_device()
                     target_dev.trusted = True
                     target_dev.connect()
-                    if target_dev.paired and target_dev.connected:      
+                    if target_dev.paired and target_dev.connected:
                         logger.info('connected!')
                         return
 
             if cnt == attempts:
-                logger.info('Cant find target device [ %s ]' , dev_name )
-                
+                logger.info('Cant find target device [ %s ]' , dev_addr )                
         except:
             self._log_exception()            
 
+
+    def adapter_set_class(self, hci_index, major, minor):
+        try: 
+            cmd="sudo btmgmt --index " + str(hci_index) + " class " + major +  " " + minor
+            subprocess.run([cmd], shell=True, check=True, stdout=subprocess.PIPE, universal_newlines=True)
+        except:
+            self._log_exception()            
 
 
     def adapter_get_instance(self,hci_name):
@@ -115,7 +138,7 @@ class BtService:
             for ad in list(adapter.Adapter.available()):
                 if hci_name in ad.path:
                     ad.pairable=True
-                    ad.discoverable=True
+                    ad.discoverable=True                    
         except:
             self._log_exception()
 
