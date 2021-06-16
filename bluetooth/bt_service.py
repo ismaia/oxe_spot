@@ -29,6 +29,8 @@ class BtService:
         else:
             BtService.__instance = self
             
+        self.on_connect=None
+        self.on_diconnect=None
         agent = BtAgentService()
         agent.start()
 
@@ -38,6 +40,16 @@ class BtService:
     
     def stop(self):
         pass    
+
+    def set_on_connect_callback(self, hci_name, cbk):
+        adapter = self.adapter_get_instance(hci_name)
+        adapter.on_connect = self._on_device_connect
+        self.on_connect = cbk
+
+    def set_on_diconnect_callback(self, hci_name, cbk):
+        adapter = self.adapter_get_instance(hci_name)
+        adapter.on_disconnect = self._on_device_disconnect
+        self.on_diconnect = cbk
 
     def get_device_by_addr(self,dev_addr,hci_name):
         try:
@@ -198,6 +210,17 @@ class BtService:
             self._log_exception()
 
 
+
+    def device_connect(self, dev_addr):
+        try:
+            for d in list(device.Device.available()):
+                if d.address == dev_addr:
+                    if not d.connected:
+                        logger.info('Connecting [ %s ]' , d.alias )
+                        d.disconnect()
+        except:
+            self._log_exception()
+
     def device_disconnect(self, dev_addr):
         try:
             for d in list(device.Device.available()):
@@ -212,6 +235,8 @@ class BtService:
         try:
             if dev != None:
                 logger.info('Device connected : [ %s : %s ]' , dev.alias , dev.address )
+            if self.on_connect != None:
+                self.on_connect()
         except:
             self._log_exception()
 
@@ -220,6 +245,8 @@ class BtService:
         try:
             if dev != None:
                 logger.info('Device disconnected : [ %s : %s ]' , dev.alias , dev.address )
+            if self.on_diconnect != None:
+                self.on_diconnect()
         except:
             self._log_exception()        
 
