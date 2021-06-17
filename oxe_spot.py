@@ -12,12 +12,8 @@ from gi.repository import GLib
 from bluetooth.bt_service import BtService
 from audio.audio_service import AudioService
 
-#=============================================
-# MQTT TOPICS
-#=============================================
-MQTT_OXE_SPOT_TOPIC='/oxe_spot'
-BT_SPK_STATUS_TOPIC=MQTT_OXE_SPOT_TOPIC+'/bt_spkr_status'
-BT_SPK_CMD_TOPIC=MQTT_OXE_SPOT_TOPIC+'bt_spkr_cmd'
+
+MAIN_STATUS_T='/oxe/main/status'
 
 #=============================================
 # Globals
@@ -25,16 +21,67 @@ BT_SPK_CMD_TOPIC=MQTT_OXE_SPOT_TOPIC+'bt_spkr_cmd'
 
 logging.basicConfig(level=logging.DEBUG, format='%(name)s :: %(message)s')
 logger = logging.getLogger(name='oxe_spot')
+
 bt_service = BtService.instance()
 audio_service = AudioService.instance()
-conf_dict = {}
 
 
+#=============================================
+# MQTT 
+#=============================================
+
+class MqttClient:
+    __instance = None
+    @staticmethod 
+    def instance():
+        """ Static access method. """
+        if MqttClient.__instance == None:
+            MqttClient()
+        return MqttClient.__instance
+
+    def __init__(self):
+        if MqttClient.__instance != None:
+            raise Exception("This class is a singleton!")
+        else:
+            MqttClient.__instance = self
+        self.mqtt_cli = None
+        self.dispatch_dict = {}
+
+    def start(self):
+        self.mqtt_cli = mqtt.Client()
+        self.mqtt_cli.on_connect = self.on_connect
+        self.mqtt_cli.on_message = self.on_message
+        self.mqtt_cli.connect_async(host='localhost', port=1883, keepalive=60, bind_address="")
+        self.mqtt_cli.loop_start()
+
+    def pub(self,topic, payload):
+        self.mqtt_cli.publish(topic, payload)
+
+    def on_connect(self,client, userdata, flags, rc):
+        logger.info("Connected to MQTT Broker")
+        self.mqtt_cli.subscribe("/oxe/#")
+
+    def add_msg_handler(self, topic, callback):
+        self.dispatch_dict[topic] = callback
+
+    def on_message(self,client, userdata, msg):
+        payload = msg.payload.decode("utf-8")
+        topic = msg.topic    
+        
+        if topic in self.dispatch_dict:
+            callback = self.dispatch_dict[topic]
+            callback(topic,payload)
+    
+mqtt_cli = MqttClient.instance()
+
+
+#=============================================
+# Signal Handler  : SIGINT
 #=============================================
 
 def signal_handler(sig, frame):
     logger.info('done')
-    mqtt_client.publish(MQTT_OXE_SPOT_TOPIC+'/status', payload='Off')
+    mqtt_cli.pub(MAIN_STATUS_T, payload='Off')
     bt_service.stop()
     audio_service.stop()
     sys.exit(0)
@@ -42,138 +89,225 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 
-#=============================================
 
-def load_conf():  
-    # Opening JSON file
-    with open('conf/oxe_spot.json') as json_file:
-        data = json.load(json_file)        
-            
+#=============================================
+# Main
+#=============================================
+class OxeSpotMain:
+    __instance = None
+    @staticmethod 
+    def instance():
+        """ Static access method. """
+        if OxeSpotMain.__instance == None:
+            OxeSpotMain()
+        return OxeSpotMain.__instance
+
+    def __init__(self):
+        if OxeSpotMain.__instance != None:
+            raise Exception("This class is a singleton!")
+        else:
+            OxeSpotMain.__instance = self
+        self.conf_dict = {}
+        self.conf_list_topic = '/oxe/main/conf/list'
+
+
+    def start(self):
+        self._load_conf()
+
+    def _load_conf(self):  
+        # Opening JSON file
+        with open('conf/oxe_spot.json') as json_file:
+            data = json.load(json_file)                        
         msg = '['
         for conf in data:                        
             #format = '[["opt1","1"],["opt2","2"],["opt3","3"]]'            
             descr = data[conf]['description']
             name  = data[conf]['name']
-            conf_dict[name] = data[conf] #build a dict with name as key
+            self.conf_dict[name] = data[conf] #build a dict with name as key
             msg   = msg + '["' + descr + '","' + name + '"],'
             logger.info('config name=%s descr=%s', name, descr)
         
         msg = msg[:-1] #remove the last comma
         msg = msg + ']'
-        mqtt_client.publish(MQTT_OXE_SPOT_TOPIC+'/conf_load', payload=msg)
+        mqtt_cli.pub(self.conf_list_topic, payload=msg)
     
+    def on_msg_conf_select(self,topic,payload):
+        logger.info('on_msg_conf_select %s', payload)
 
+    def on_msg_vol_ctrl1_mute(self,topic,payload):
+        logger.info('on_msg_vol_ctrl1_mute %s', payload)
+
+    def on_msg_vol_ctrl1_vol(self,topic,payload):
+        logger.info('on_msg_vol_ctrl1_vol %s', payload)
+
+    def on_msg_vol_ctrl2_mute(self,topic,payload):
+        logger.info('on_msg_vol_ctrl2_mute %s', payload)
+
+    def on_msg_vol_ctrl2_vol(self,topic,payload):
+        logger.info('on_msg_vol_ctrl2_vol %s', payload)
+
+
+oxe_spot = OxeSpotMain.instance()
 
 #=============================================
-# BT Speakers
+# Audio Controls
 #=============================================
-bt_spkr = None
 
+class AudioCtl:
+    __instance = None
+    @staticmethod 
+    def instance():
+        """ Static access method. """
+        if AudioCtl.__instance == None:
+            AudioCtl()
+        return AudioCtl.__instance
 
-def bt_speaker_send_connected_msg():
-    mqtt_client.publish(BT_SPK_STATUS_TOPIC, payload='connected')
-
-def bt_speaker_send_not_connected_msg():
-    mqtt_client.publish(BT_SPK_STATUS_TOPIC, payload='not connected')
-
-def bt_speaker_on_connect(dev):
-    if dev == None:
-        bt_speaker_send_not_connected_msg()
-        return
-
-    logger.info('Device connected : [ %s : %s ]' , dev.alias , dev.address )
-    bt_speaker_send_connected_msg()
-    audio_service.print_sinks()
-    
-
-
-def bt_speaker_on_disconnect(dev):
-    if dev == None:
-        bt_speaker_send_not_connected_msg()
-        return    
-    
-    logger.info('Device disconnected : [ %s : %s ]' , dev.alias , dev.address )
-    bt_speaker_send_not_connected_msg()
-    audio_service.print_sinks()
-
-def bt_speaker_check_connect_state(spk):
-    if spk == None:
-        bt_speaker_send_not_connected_msg()
-        return
-
-    time.sleep(4)
-    if spk.connected:
-        bt_speaker_send_connected_msg()
-    else:
-        bt_speaker_send_not_connected_msg()
-
-
-def bt_speaker_on_message(topic, payload):        
-    global bt_spkr
-
-    if 'bt_command' in topic:
-        logger.info('bt_command:%s', payload)
-        if bt_spkr == None:
-            mqtt_client.publish(BT_SPK_STATUS_TOPIC, payload='cant find speaker')
-            return
+    def __init__(self):
+        if AudioCtl.__instance != None:
+            raise Exception("This class is a singleton!")
+        else:
+            AudioCtl.__instance = self
         
-        if payload == 'connect':
-            mqtt_client.publish(BT_SPK_STATUS_TOPIC, payload='connecting...')
-            logger.info('connecting [%s %s]', str(bt_spkr.address), str(bt_spkr.alias))                        
-            bt_spkr.connect()
-              
-        elif payload == 'disconnect':
-            mqtt_client.publish(BT_SPK_STATUS_TOPIC, payload='disconnecting...')
-            logger.info('diconnecting [%s %s]', str(bt_spkr.address), str(bt_spkr.alias))            
-            bt_spkr.disconnect()
+        self.audio_port = ''
+                
+
+
+audio_ctl = AudioCtl.instance()
+
+#=============================================
+# BT Speaker
+#=============================================
+
+class BtSpeaker:
+    __instance = None
+    @staticmethod 
+    def instance():
+        """ Static access method. """
+        if BtSpeaker.__instance == None:
+            BtSpeaker()
+        return BtSpeaker.__instance
+
+    def __init__(self):
+        if BtSpeaker.__instance != None:
+            raise Exception("This class is a singleton!")
+        else:
+            BtSpeaker.__instance = self
         
-        th = threading.Thread(target=bt_speaker_check_connect_state, args=(bt_spkr,))
-        th.start()
+        self.bt_spkr_dev = None #Device object
+        self.status_topic  = '/oxe/bt_spkr/status'
+        self.bt_spkr_list = '/oxe/bt_spkr/list'        
+    
+    def load_conf(self):  
+        # Opening JSON file
+        with open('conf/oxe_spot.json') as json_file:
+            data = json.load(json_file)        
             
-    elif 'select_speaker' in topic:
-        logger.info('select speaker:%s' , payload)
-        bt_spkr = bt_service.get_device_by_name(payload, 'hci1') 
+        spkr_dict={}
+        for conf in data:                        
+            #format = '[["opt1","1"],["opt2","2"],["opt3","3"]]'
+            conf_dict = data[conf]
+            if 'audio_sink1_type' in conf_dict and conf_dict['audio_sink1_type'] == 'bt':
+                s_descr = conf_dict['audio_sink1_descr']
+                s_name  = conf_dict['audio_sink1_name']
+                spkr_dict[s_descr] = s_name
+                
+            if 'audio_sink2_type' in conf_dict and conf_dict['audio_sink2_type'] == 'bt':
+                s_descr = conf_dict['audio_sink2_descr']
+                s_name  = conf_dict['audio_sink2_name']
+                spkr_dict[s_descr] = s_name
+
+        msg = '['
+        for sp in spkr_dict:
+            descr = sp
+            name  = spkr_dict[sp]
+            msg = msg + '["' + descr + '","' + name + '"],'
+        msg = msg[:-1] #remove the last comma
+        msg = msg + ']'             
+        logger.info('BT speakers: %s' , msg)
+        mqtt_cli.pub(self.bt_spkr_list, payload=msg)
+
+
+    def send_msg_connected(self):
+        mqtt_cli.pub(self.status_topic, payload='connected')
+
+    def send_msg_not_connected(self):
+        mqtt_cli.pub(self.status_topic, payload='not connected')
+
+    def on_connect(self,dev):
+        if dev == None:
+            self.send_msg_not_connected()
+            return
+        logger.info('Device connected : [ %s : %s ]' , dev.alias , dev.address )
+        self.send_msg_connected()
+
+    def on_disconnect(self,dev):
+        if dev == None:
+            self.send_msg_not_connected()
+            return    
+        logger.info('Device disconnected : [ %s : %s ]' , dev.alias , dev.address )
+        self.send_msg_not_connected()
+
+
+    def check_connect_state(self,spk):
+        if spk == None:
+            self.send_msg_not_connected()
+            return        
+        if spk.connected:
+            self.send_msg_connected()
+        else:
+            self.send_msg_not_connected()
+
+
+    def on_msg_select(self,topic, payload):
+        pass
+    
+    def on_msg_connect(self,topic, payload):
+        if self.bt_spkr_dev == None:
+            self.send_msg_not_connected()
+            return
+        mqtt_cli.pub(self.status_topic, payload='connecting...')
+        logger.info('connecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
+        self.bt_spkr_dev.connect()
         
 
+    def on_msg_disconnect(self,topic, payload):
+        if self.bt_spkr_dev == None:
+            self.send_msg_not_connected()
+            return
+        mqtt_cli.pub(self.status_topic, payload='disconnecting...')
+        logger.info('disconnecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
+        self.bt_spkr_dev.disconnect()
 
 
-#=============================================
-# MQTT callbacks
-#=============================================
-
-def mqtt_on_connect(client, userdata, flags, rc):
-    logger.info("Connected to MQTT Broker")
-    mqtt_client.subscribe(MQTT_OXE_SPOT_TOPIC + "/#")
-
-
-
-def mqtt_on_message(client, userdata, msg):
-    payload = msg.payload.decode("utf-8")
-    topic = msg.topic
-    #logger.info('topic=%s, payload=%s' , topic, payload)
-    if 'bt_spkr' in topic:
-        bt_speaker_on_message(topic,payload)
+    # th = threading.Thread(target=self.check_connect_state, args=(self.bt_spkr_dev,))
+    # th.start()
+            
+bt_spkr = BtSpeaker.instance()
 
 
 if __name__ == '__main__':
     DBusGMainLoop(set_as_default=True)
 
-    #=============================================
-    # MQTT 
-    #=============================================
-    mqtt_client = mqtt.Client()
-    mqtt_client.on_connect = mqtt_on_connect
-    mqtt_client.on_message = mqtt_on_message
-    mqtt_client.connect_async(host='localhost', port=1883, keepalive=60, bind_address="")
-    mqtt_client.loop_start()
-
+    mqtt_cli.start()
+    oxe_spot.start()
+    bt_spkr.load_conf()
 
     #=============================================
-    # load config 
+    # Callback registration
     #=============================================
+    mqtt_cli.add_msg_handler('/oxe/main/conf/select', oxe_spot.on_msg_conf_select)
+    mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl1/mute', oxe_spot.on_msg_vol_ctrl1_mute)
+    mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl1/vol', oxe_spot.on_msg_vol_ctrl1_vol)
+    mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl2/mute', oxe_spot.on_msg_vol_ctrl2_mute)
+    mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl2/vol', oxe_spot.on_msg_vol_ctrl2_vol)
 
-    load_conf()
+    mqtt_cli.add_msg_handler('/oxe/bt_spkr/select', bt_spkr.on_msg_select)
+    mqtt_cli.add_msg_handler('/oxe/bt_spkr/connect',bt_spkr.on_msg_connect)
+    mqtt_cli.add_msg_handler('/oxe/bt_spkr/disconnect',bt_spkr.on_msg_disconnect)
 
+
+
+    
 
     #=============================================
     # Bluetooth
@@ -193,23 +327,20 @@ if __name__ == '__main__':
     bt_service.adapter_set_discoverable(hci0_dev)  
     hci0 = bt_service.adapter_get_instance(hci0_dev)
     hci1 = bt_service.adapter_get_instance(hci1_dev)
-    hci1.on_connect = bt_speaker_on_connect
-    hci1.on_disconnect = bt_speaker_on_disconnect
-
-
-    bt_spkr = bt_service.get_device_by_name('MEGABOOM 3', hci1_dev) #default speaker
-    bt_speaker_check_connect_state(bt_spkr)
+    hci1.on_connect = BtSpeaker.instance().on_connect
+    hci1.on_disconnect = BtSpeaker.instance().on_disconnect
 
 
     #=============================================
-    # Pulseaudio
+    # Audio
     #=============================================
     audio_service.print_sources()
     audio_service.print_sinks()
 
+    
     #=============================================
     logger.info('ready')
-    mqtt_client.publish(MQTT_OXE_SPOT_TOPIC+'/status', payload='ready')
+    mqtt_cli.pub(MAIN_STATUS_T, payload='ready')
 
     loop = GLib.MainLoop()
     loop.run()
