@@ -6,6 +6,9 @@ import time
 import paho.mqtt.client as mqtt
 import threading
 import json
+import os, sys, traceback
+import subprocess
+
 
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
@@ -47,7 +50,7 @@ class MqttClient:
         self.mqtt_cli = None
         self.dispatch_dict = {}
 
-    def start(self):
+    def init(self):
         self.mqtt_cli = mqtt.Client()
         self.mqtt_cli.on_connect = self.on_connect
         self.mqtt_cli.on_message = self.on_message
@@ -111,7 +114,7 @@ class OxeSpotMain:
         self.conf_list_topic = '/oxe/main/conf/list'
 
 
-    def start(self):
+    def init(self):
         self._load_conf()
 
     def _load_conf(self):  
@@ -195,7 +198,13 @@ class BtSpeaker:
         
         self.bt_spkr_dev = None #Device object
         self.status_topic  = '/oxe/bt_spkr/status'
-        self.bt_spkr_list = '/oxe/bt_spkr/list'        
+        self.bt_spkr_list = '/oxe/bt_spkr/list'       
+        self.default_hci  = 'hci1'         
+
+    def init(self):
+        self.load_conf()
+        mqtt_cli.pub(bt_spkr.status_topic, '-')
+
     
     def load_conf(self):  
         # Opening JSON file
@@ -207,14 +216,12 @@ class BtSpeaker:
             #format = '[["opt1","1"],["opt2","2"],["opt3","3"]]'
             conf_dict = data[conf]
             if 'audio_sink1_type' in conf_dict and conf_dict['audio_sink1_type'] == 'bt':
-                s_descr = conf_dict['audio_sink1_descr']
-                s_name  = conf_dict['audio_sink1_name']
-                spkr_dict[s_descr] = s_name
+                s_descr = conf_dict['audio_sink1_descr']                
+                spkr_dict[s_descr] = s_descr #key = value
                 
             if 'audio_sink2_type' in conf_dict and conf_dict['audio_sink2_type'] == 'bt':
-                s_descr = conf_dict['audio_sink2_descr']
-                s_name  = conf_dict['audio_sink2_name']
-                spkr_dict[s_descr] = s_name
+                s_descr = conf_dict['audio_sink2_descr']                
+                spkr_dict[s_descr] = s_descr #key = value
 
         msg = '['
         for sp in spkr_dict:
@@ -233,9 +240,13 @@ class BtSpeaker:
     def send_msg_not_connected(self):
         mqtt_cli.pub(self.status_topic, payload='not connected')
 
+    def send_msg_select_spkr(self):
+        mqtt_cli.pub(self.status_topic, payload='select a speaker')
+    
+
     def on_connect(self,dev):
         if dev == None:
-            self.send_msg_not_connected()
+            self.send_msg_select_spkr()
             return
         logger.info('Device connected : [ %s : %s ]' , dev.alias , dev.address )
         self.send_msg_connected()
@@ -250,7 +261,7 @@ class BtSpeaker:
 
     def check_connect_state(self,spk):
         if spk == None:
-            self.send_msg_not_connected()
+            self.send_msg_select_spkr()
             return        
         if spk.connected:
             self.send_msg_connected()
@@ -259,28 +270,48 @@ class BtSpeaker:
 
 
     def on_msg_select(self,topic, payload):
-        pass
+        self.bt_spkr_dev = bt_service.get_device_by_name(payload,self.default_hci)
+        if self.bt_spkr_dev == None:
+            mqtt_cli.pub(self.status_topic, payload='Not available')
+
     
     def on_msg_connect(self,topic, payload):
-        if self.bt_spkr_dev == None:
+        try:
+            if self.bt_spkr_dev == None:
+                self.send_msg_select_spkr()
+                return
+            if self.bt_spkr_dev.connected:
+                self.send_msg_connected()
+                logger.info('[%s %s] already connected', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
+                return
+
+            mqtt_cli.pub(self.status_topic, payload='connecting...')
+            logger.info('connecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
+            self.bt_spkr_dev.connect()
+        except:
             self.send_msg_not_connected()
-            return
-        mqtt_cli.pub(self.status_topic, payload='connecting...')
-        logger.info('connecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
-        self.bt_spkr_dev.connect()
+            self._log_exception()
         
 
     def on_msg_disconnect(self,topic, payload):
-        if self.bt_spkr_dev == None:
+        try:        
+            if self.bt_spkr_dev == None:
+                self.send_msg_select_spkr()
+                return
+            mqtt_cli.pub(self.status_topic, payload='disconnecting...')
+            logger.info('disconnecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
+            self.bt_spkr_dev.disconnect()
+        except:
             self.send_msg_not_connected()
-            return
-        mqtt_cli.pub(self.status_topic, payload='disconnecting...')
-        logger.info('disconnecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
-        self.bt_spkr_dev.disconnect()
+            self._log_exception()
 
+    def _log_exception(self):
+        ex = str(sys.exc_info()[1])
+        tb = sys.exc_info()[-1]
+        stk = traceback.extract_tb(tb, 1)
+        func_name = stk[0][2]            
+        logger.error("Error : " + func_name + ' : ' + ex)
 
-    # th = threading.Thread(target=self.check_connect_state, args=(self.bt_spkr_dev,))
-    # th.start()
             
 bt_spkr = BtSpeaker.instance()
 
@@ -288,9 +319,9 @@ bt_spkr = BtSpeaker.instance()
 if __name__ == '__main__':
     DBusGMainLoop(set_as_default=True)
 
-    mqtt_cli.start()
-    oxe_spot.start()
-    bt_spkr.load_conf()
+    mqtt_cli.init()
+    oxe_spot.init()
+    bt_spkr.init()
 
     #=============================================
     # Callback registration

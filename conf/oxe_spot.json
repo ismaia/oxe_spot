@@ -11,7 +11,8 @@
       "audio_sink2_name" : "bluez_sink.EC_81_93_A9_47_36.a2dp_sink",
       "audio_sink2_descr" : "MEGABOOM 3",
       "audio_sink2_type" : "bt",
-      "audio_sink2_addr" : "EC:81:93:A9:47:36"
+      "audio_sink2_addr" : "EC:81:93:A9:47:36",
+      "audio_sink2_hci" : "hci1"
    },
    "config2" : {
       "name" : "tt_mb3",
@@ -22,7 +23,8 @@
       "audio_sink1_name" : "bluez_sink.EC_81_93_A9_47_36.a2dp_sink",
       "audio_sink1_descr" : "MEGABOOM 3",
       "audio_sink1_type" : "bt",
-      "audio_sink1_addr" : "EC:81:93:A9:47:36"
+      "audio_sink1_addr" : "EC:81:93:A9:47:36",
+      "audio_sink1_hci" : "hci1"
    },
    "config3" : {
       "name" : "tt_sc2aux",
@@ -43,6 +45,7 @@
       "audio_sink1_name" : "bluez_sink.08_EB_ED_AA_84_26.a2dp_sink",
       "audio_sink1_descr" : "SoundCore 2",
       "audio_sink1_type" : "bt",
-      "audio_sink1_addr" : "EC:81:93:A9:47:36"
+      "audio_sink1_addr" : "EC:81:93:A9:47:36",
+      "audio_sink1_hci" : "hci1"
    }
 }
