@@ -62,7 +62,6 @@ class AudioService:
                 pa_vol=self.source_vol*1000                
                 logger.info('Vol changed=%d , pa_volume=%d', self.source_vol, pa_vol )
             
-            
         self.bus.add_signal_receiver(volume_changed_handler,
                                      bus_name='org.bluez',
                                      dbus_interface=dbus.PROPERTIES_IFACE,

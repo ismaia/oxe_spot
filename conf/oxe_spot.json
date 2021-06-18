@@ -2,11 +2,11 @@
    "config1" : {
       "name" : "tt_mb3_sc2aux",
       "description"  : "Turntable, MEGABOOM 3, SoundCore 2(aux)",
-      "audio_source1" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
+      "audio_source1_name" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
       "audio_source1_type" : "alsa",      
       "sink_type" : "combined" ,      
       "audio_sink1_name" : "alsa_output.usb-0d8c_USB_Sound_Device-00.analog-stereo",
-      "audio_sink1_descr" : "CM106 Like Sound Device Analog Stereo",      
+      "audio_sink1_descr" : "SoundCore 2(CM106)",
       "audio_sink1_type"  : "alsa",      
       "audio_sink2_name" : "bluez_sink.EC_81_93_A9_47_36.a2dp_sink",
       "audio_sink2_descr" : "MEGABOOM 3",
@@ -17,7 +17,7 @@
    "config2" : {
       "name" : "tt_mb3",
       "description"  : "Turntable, MEGABOOM 3(bt)",
-      "audio_source1" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
+      "audio_source1_name" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
       "audio_source1_type" : "alsa",      
       "sink_type" : "single" ,
       "audio_sink1_name" : "bluez_sink.EC_81_93_A9_47_36.a2dp_sink",
@@ -29,17 +29,17 @@
    "config3" : {
       "name" : "tt_sc2aux",
       "description"  : "Turntable, SoundCore 2(aux)",
-      "audio_source1" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
+      "audio_source1_name" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
       "audio_source1_type" : "alsa",
       "sink_type" : "single" ,
       "audio_sink1_name" : "alsa_output.usb-0d8c_USB_Sound_Device-00.analog-stereo",
-      "audio_sink1_descr" : "CM106 Like Sound Device Analog Stereo",      
+      "audio_sink1_descr" : "SoundCore 2(CM106)",      
       "audio_sink1_type"  : "alsa"
    },
    "config4" : {
       "name" : "tt_sc2bt",
       "description"  : "Turntable, SoundCore 2(bt)",
-      "audio_source1" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
+      "audio_source1_name" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
       "audio_source1_type" : "alsa",
       "sink_type" : "single" ,
       "audio_sink1_name" : "bluez_sink.08_EB_ED_AA_84_26.a2dp_sink",

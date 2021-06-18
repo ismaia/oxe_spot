@@ -8,7 +8,7 @@ import threading
 import json
 import os, sys, traceback
 import subprocess
-
+import pulsectl
 
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
@@ -85,6 +85,7 @@ mqtt_cli = MqttClient.instance()
 def signal_handler(sig, frame):
     logger.info('done')
     mqtt_cli.pub(MAIN_STATUS_T, payload='Off')
+    oxe_spot.destroy_audio_conf()
     bt_service.stop()
     audio_service.stop()
     sys.exit(0)
@@ -112,6 +113,11 @@ class OxeSpotMain:
             OxeSpotMain.__instance = self
         self.conf_dict = {}
         self.conf_list_topic = '/oxe/main/conf/list'
+        self.curr_conf = None
+        self.curr_source = None
+        self.curr_sink1 = None
+        self.curr_sink2 = None
+        self.pa_module_list = []
 
 
     def init(self):
@@ -135,7 +141,76 @@ class OxeSpotMain:
         mqtt_cli.pub(self.conf_list_topic, payload=msg)
     
     def on_msg_conf_select(self,topic,payload):
-        logger.info('on_msg_conf_select %s', payload)
+        logger.info('on_msg_conf_select conf=%s', payload)
+        conf_name = payload
+        sink1='-'
+        sink2='-'
+        if 'description' in self.conf_dict[conf_name]:
+            self.curr_conf = self.conf_dict[conf_name]
+        else:
+            logger.info('Error on selecting config')
+            return        
+        
+        if 'audio_sink1_descr' in self.curr_conf:
+            sink1=self.curr_conf['audio_sink1_descr']
+
+        if 'audio_sink2_descr' in self.curr_conf:
+            sink2=self.curr_conf['audio_sink2_descr']                            
+
+        mqtt_cli.pub('/oxe/main/vol_ctrl1/device_name', sink1)
+        mqtt_cli.pub('/oxe/main/vol_ctrl2/device_name', sink2)
+        mqtt_cli.pub('/oxe/main/notification', 'selected config :'+conf_name)
+        self.build_audio_conf()
+    
+    def build_audio_conf(self):                
+        try:
+            self.destroy_audio_conf() #destroy previous audio conf
+            
+            pa = audio_service.pulse
+
+            #null source
+            m_idx = pa.module_load('module-null-source')    
+            self.pa_module_list.append(m_idx)
+            null_source=pa.get_source_by_name('source.null')
+            pa.source_default_set(null_source)
+
+            #null sink
+            m_idx = pa.module_load('module-null-sink')    
+            self.pa_module_list.append(m_idx)
+            null_sink=pa.get_sink_by_name('null')
+            pa.sink_default_set(null_sink)
+
+            source1_name = self.curr_conf['audio_source1_name']
+            self.curr_source = pa.get_source_by_name(source1_name)
+            sink1_name = self.curr_conf['audio_sink1_name']
+            self.curr_sink1 = pa.get_sink_by_name(sink1_name)
+
+            if self.curr_conf['sink_type'] == 'combined':
+                sink2_name = self.curr_conf['audio_sink2_name']
+                self.curr_sink2 = pa.get_sink_by_name(sink2_name)
+                m_idx = pa.module_load('module-combine-sink', 'adjust_time=5 sink_name=combined_sinks slaves='+sink1_name+','+sink2_name)
+                self.pa_module_list.append(m_idx)
+                m_idx = pa.module_load('module-loopback', 'source='+source1_name + ' sink=combined_sinks')
+                self.pa_module_list.append(m_idx)
+            elif self.curr_conf['sink_type'] == 'single':
+                m_idx = pa.module_load('module-loopback', 'source='+source1_name + ' sink='+sink1_name)
+                self.pa_module_list.append(m_idx)
+        except:
+            mqtt_cli.pub('/oxe/main/notification', 'Error on creating pa module')
+            self.destroy_audio_conf()
+            self._log_exception()
+
+
+    def destroy_audio_conf(self):
+        try:
+            pa = audio_service.pulse
+            for i in self.pa_module_list:
+                pa.module_unload(i)
+            self.pa_module_list.clear()
+        except:
+            mqtt_cli.pub('/oxe/main/notification', 'Error on removing pa module')
+            self._log_exception()
+
 
     def on_msg_vol_ctrl1_mute(self,topic,payload):
         logger.info('on_msg_vol_ctrl1_mute %s', payload)
@@ -148,6 +223,13 @@ class OxeSpotMain:
 
     def on_msg_vol_ctrl2_vol(self,topic,payload):
         logger.info('on_msg_vol_ctrl2_vol %s', payload)
+
+    def _log_exception(self):
+        ex = str(sys.exc_info()[1])
+        tb = sys.exc_info()[-1]
+        stk = traceback.extract_tb(tb, 1)
+        func_name = stk[0][2]            
+        logger.error("Error : " + func_name + ' : ' + ex)
 
 
 oxe_spot = OxeSpotMain.instance()
@@ -197,7 +279,7 @@ class BtSpeaker:
             BtSpeaker.__instance = self
         
         self.bt_spkr_dev = None #Device object
-        self.status_topic  = '/oxe/bt_spkr/status'
+        self.status_topic = '/oxe/bt_spkr/status'
         self.bt_spkr_list = '/oxe/bt_spkr/list'       
         self.default_hci  = 'hci1'         
 
@@ -273,6 +355,7 @@ class BtSpeaker:
         self.bt_spkr_dev = bt_service.get_device_by_name(payload,self.default_hci)
         if self.bt_spkr_dev == None:
             mqtt_cli.pub(self.status_topic, payload='Not available')
+            mqtt_cli.pub('/oxe/bt_spkr/notification','Speaker not available or not paired')
 
     
     def on_msg_connect(self,topic, payload):
@@ -367,11 +450,13 @@ if __name__ == '__main__':
     #=============================================
     audio_service.print_sources()
     audio_service.print_sinks()
-
     
     #=============================================
     logger.info('ready')
     mqtt_cli.pub(MAIN_STATUS_T, payload='ready')
+
+    #pa = audio_service.pulse
+
 
     loop = GLib.MainLoop()
     loop.run()
