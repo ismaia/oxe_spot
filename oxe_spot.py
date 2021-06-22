@@ -27,7 +27,7 @@ logger = logging.getLogger(name='oxe_spot')
 
 bt_service = BtService.instance()
 audio_service = AudioService.instance()
-
+pa = audio_service.pulse
 
 #=============================================
 # MQTT 
@@ -158,16 +158,13 @@ class OxeSpotMain:
             sink2=self.curr_conf['audio_sink2_descr']                            
 
         mqtt_cli.pub('/oxe/main/vol_ctrl1/device_name', sink1)
-        mqtt_cli.pub('/oxe/main/vol_ctrl2/device_name', sink2)
-        mqtt_cli.pub('/oxe/main/notification', 'selected config :'+conf_name)
+        mqtt_cli.pub('/oxe/main/vol_ctrl2/device_name', sink2)        
         self.build_audio_conf()
     
     def build_audio_conf(self):                
         try:
             self.destroy_audio_conf() #destroy previous audio conf
             
-            pa = audio_service.pulse
-
             #null source
             m_idx = pa.module_load('module-null-source')    
             self.pa_module_list.append(m_idx)
@@ -194,35 +191,48 @@ class OxeSpotMain:
                 self.pa_module_list.append(m_idx)
             elif self.curr_conf['sink_type'] == 'single':
                 m_idx = pa.module_load('module-loopback', 'source='+source1_name + ' sink='+sink1_name)
-                self.pa_module_list.append(m_idx)
+                self.pa_module_list.append(m_idx)            
+            
+            mqtt_cli.pub('/oxe/main/status', 'ready')
         except:
-            mqtt_cli.pub('/oxe/main/notification', 'Error on creating pa module')
+            mqtt_cli.pub('/oxe/main/notification', 'Error on creating pa modules')
+            mqtt_cli.pub('/oxe/main/status', 'Error: audio port not ready')
             self.destroy_audio_conf()
             self._log_exception()
 
 
     def destroy_audio_conf(self):
-        try:
-            pa = audio_service.pulse
+        try:            
             for i in self.pa_module_list:
                 pa.module_unload(i)
             self.pa_module_list.clear()
+            self.curr_source = None
+            self.curr_sink1 = None
+            self.curr_sink2 = None            
         except:
             mqtt_cli.pub('/oxe/main/notification', 'Error on removing pa module')
+            mqtt_cli.pub('/oxe/main/status', 'Error: cleaning pa modules')
             self._log_exception()
 
 
-    def on_msg_vol_ctrl1_mute(self,topic,payload):
-        logger.info('on_msg_vol_ctrl1_mute %s', payload)
-
     def on_msg_vol_ctrl1_vol(self,topic,payload):
         logger.info('on_msg_vol_ctrl1_vol %s', payload)
+        try:
+            vol = int(payload)
+            if self.curr_sink1 != None:
+                pa.volume_set_all_chans(self.curr_sink1, vol / 100 )
+        except:
+            self._log_exception()
 
-    def on_msg_vol_ctrl2_mute(self,topic,payload):
-        logger.info('on_msg_vol_ctrl2_mute %s', payload)
 
     def on_msg_vol_ctrl2_vol(self,topic,payload):
         logger.info('on_msg_vol_ctrl2_vol %s', payload)
+        try:
+            vol = int(payload)
+            if self.curr_sink2 != None:
+                pa.volume_set_all_chans(self.curr_sink2, vol / 100 )
+        except:
+            self._log_exception()
 
     def _log_exception(self):
         ex = str(sys.exc_info()[1])
@@ -316,12 +326,6 @@ class BtSpeaker:
         mqtt_cli.pub(self.bt_spkr_list, payload=msg)
 
 
-    def send_msg_connected(self):
-        mqtt_cli.pub(self.status_topic, payload='connected')
-
-    def send_msg_not_connected(self):
-        mqtt_cli.pub(self.status_topic, payload='not connected')
-
     def send_msg_select_spkr(self):
         mqtt_cli.pub(self.status_topic, payload='select a speaker')
     
@@ -331,24 +335,23 @@ class BtSpeaker:
             self.send_msg_select_spkr()
             return
         logger.info('Device connected : [ %s : %s ]' , dev.alias , dev.address )
-        self.send_msg_connected()
+        self.send_msg_connect_state()
 
     def on_disconnect(self,dev):
         if dev == None:
-            self.send_msg_not_connected()
+            self.send_msg_connect_state()
             return    
         logger.info('Device disconnected : [ %s : %s ]' , dev.alias , dev.address )
-        self.send_msg_not_connected()
+        self.send_msg_connect_state()
 
-
-    def check_connect_state(self,spk):
-        if spk == None:
-            self.send_msg_select_spkr()
+    def send_msg_connect_state(self):
+        if self.bt_spkr_dev == None:
+            mqtt_cli.pub(self.status_topic, payload='not connected')
             return        
-        if spk.connected:
-            self.send_msg_connected()
+        if self.bt_spkr_dev.connected:
+            mqtt_cli.pub(self.status_topic, payload='connected')            
         else:
-            self.send_msg_not_connected()
+            mqtt_cli.pub(self.status_topic, payload='not connected')
 
 
     def on_msg_select(self,topic, payload):
@@ -356,7 +359,8 @@ class BtSpeaker:
         if self.bt_spkr_dev == None:
             mqtt_cli.pub(self.status_topic, payload='Not available')
             mqtt_cli.pub('/oxe/bt_spkr/notification','Speaker not available or not paired')
-
+            return
+        self.send_msg_connect_state()
     
     def on_msg_connect(self,topic, payload):
         try:
@@ -364,7 +368,7 @@ class BtSpeaker:
                 self.send_msg_select_spkr()
                 return
             if self.bt_spkr_dev.connected:
-                self.send_msg_connected()
+                self.send_msg_connect_state()
                 logger.info('[%s %s] already connected', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
                 return
 
@@ -372,7 +376,7 @@ class BtSpeaker:
             logger.info('connecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
             self.bt_spkr_dev.connect()
         except:
-            self.send_msg_not_connected()
+            self.send_msg_connect_state()
             self._log_exception()
         
 
@@ -385,7 +389,7 @@ class BtSpeaker:
             logger.info('disconnecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
             self.bt_spkr_dev.disconnect()
         except:
-            self.send_msg_not_connected()
+            self.send_msg_connect_state()
             self._log_exception()
 
     def _log_exception(self):
@@ -409,19 +413,14 @@ if __name__ == '__main__':
     #=============================================
     # Callback registration
     #=============================================
-    mqtt_cli.add_msg_handler('/oxe/main/conf/select', oxe_spot.on_msg_conf_select)
-    mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl1/mute', oxe_spot.on_msg_vol_ctrl1_mute)
-    mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl1/vol', oxe_spot.on_msg_vol_ctrl1_vol)
-    mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl2/mute', oxe_spot.on_msg_vol_ctrl2_mute)
+    mqtt_cli.add_msg_handler('/oxe/main/conf/select', oxe_spot.on_msg_conf_select)    
+    mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl1/vol', oxe_spot.on_msg_vol_ctrl1_vol)    
     mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl2/vol', oxe_spot.on_msg_vol_ctrl2_vol)
 
     mqtt_cli.add_msg_handler('/oxe/bt_spkr/select', bt_spkr.on_msg_select)
     mqtt_cli.add_msg_handler('/oxe/bt_spkr/connect',bt_spkr.on_msg_connect)
     mqtt_cli.add_msg_handler('/oxe/bt_spkr/disconnect',bt_spkr.on_msg_disconnect)
 
-
-
-    
 
     #=============================================
     # Bluetooth
@@ -455,7 +454,7 @@ if __name__ == '__main__':
     logger.info('ready')
     mqtt_cli.pub(MAIN_STATUS_T, payload='ready')
 
-    #pa = audio_service.pulse
+    #
 
 
     loop = GLib.MainLoop()

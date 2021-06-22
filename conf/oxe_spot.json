@@ -5,8 +5,8 @@
       "audio_source1_name" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
       "audio_source1_type" : "alsa",      
       "sink_type" : "combined" ,      
-      "audio_sink1_name" : "alsa_output.usb-0d8c_USB_Sound_Device-00.analog-stereo",
-      "audio_sink1_descr" : "SoundCore 2(CM106)",
+      "audio_sink1_name" : "alsa_output.pci-0000_00_1b.0.analog-stereo",
+      "audio_sink1_descr" : "SoundCore 2(aux)",
       "audio_sink1_type"  : "alsa",      
       "audio_sink2_name" : "bluez_sink.EC_81_93_A9_47_36.a2dp_sink",
       "audio_sink2_descr" : "MEGABOOM 3",
@@ -32,8 +32,8 @@
       "audio_source1_name" : "alsa_input.usb-0d8c_USB_Sound_Device-00.analog-stereo",
       "audio_source1_type" : "alsa",
       "sink_type" : "single" ,
-      "audio_sink1_name" : "alsa_output.usb-0d8c_USB_Sound_Device-00.analog-stereo",
-      "audio_sink1_descr" : "SoundCore 2(CM106)",      
+      "audio_sink1_name" : "alsa_output.pci-0000_00_1b.0.analog-stereo",
+      "audio_sink1_descr" : "SoundCore 2(aux)",
       "audio_sink1_type"  : "alsa"
    },
    "config4" : {
