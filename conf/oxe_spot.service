@@ -1,9 +1,9 @@
 [Unit]
-Description=Oxe Spot Service
+Description=Oxe Spot Watchdog
 
 [Service]
 WorkingDirectory=/home/isaac/oxe_spot_snap
-ExecStart=/usr/bin/python3 /home/isaac/oxe_spot_snap/oxe_spot.py
+ExecStart=/home/isaac/oxe_spot_snap/scripts/oxe_watchdog.sh
 
 [Install]
 WantedBy=default.target

@@ -104,7 +104,7 @@ class HomeView:
         else:
             HomeView.__instance = self
         self.conf_dict = {}
-        self.conf_list_topic = '/oxe/main/conf/list'
+        self.conf_list_topic = '/oxe/home/conf/list'
         self.curr_conf = None
         self.curr_source = None
         self.curr_sink1 = None
@@ -149,8 +149,8 @@ class HomeView:
         if 'audio_sink2_descr' in self.curr_conf:
             sink2=self.curr_conf['audio_sink2_descr']                            
 
-        mqtt_cli.pub('/oxe/main/vol_ctrl1/device_name', sink1)
-        mqtt_cli.pub('/oxe/main/vol_ctrl2/device_name', sink2)        
+        mqtt_cli.pub('/oxe/home/vol_ctrl1/device_name', sink1)
+        mqtt_cli.pub('/oxe/home/vol_ctrl2/device_name', sink2)        
         self.build_audio_conf()
     
     def build_audio_conf(self):                
@@ -185,10 +185,10 @@ class HomeView:
                 m_idx = pa.module_load('module-loopback', 'source='+source1_name + ' sink='+sink1_name)
                 self.pa_module_list.append(m_idx)            
             
-            mqtt_cli.pub('/oxe/main/status', 'ready')
+            mqtt_cli.pub('/oxe/home/status', 'ready')
         except:
-            mqtt_cli.pub('/oxe/main/notification', 'Error on creating pa modules')
-            mqtt_cli.pub('/oxe/main/status', 'Error: audio port not ready')
+            mqtt_cli.pub('/oxe/home/notification', 'Error on creating pa modules')
+            mqtt_cli.pub('/oxe/home/status', 'Error: audio port not ready')
             self.destroy_audio_conf()
             self._log_exception()
 
@@ -202,8 +202,8 @@ class HomeView:
             self.curr_sink1 = None
             self.curr_sink2 = None            
         except:
-            mqtt_cli.pub('/oxe/main/notification', 'Error on removing pa module')
-            mqtt_cli.pub('/oxe/main/status', 'Error: cleaning pa modules')
+            mqtt_cli.pub('/oxe/home/notification', 'Error on removing pa module')
+            mqtt_cli.pub('/oxe/home/status', 'Error: cleaning pa modules')
             self._log_exception()
 
 
@@ -277,8 +277,8 @@ class BtSpeakerView:
             BtSpeakerView.__instance = self
         
         self.bt_spkr_dev = None #Device object
-        self.status_topic = '/oxe/bt_spkr_vw/status'
-        self.bt_spkr_list = '/oxe/bt_spkr_vw/list'       
+        self.status_topic = '/oxe/bt_spkr/status'
+        self.bt_spkr_list = '/oxe/bt_spkr/list'       
         self.default_hci  = 'hci1'         
 
     def init(self):
@@ -345,7 +345,7 @@ class BtSpeakerView:
         self.bt_spkr_dev = bt_service.get_device_by_name(payload,self.default_hci)
         if self.bt_spkr_dev == None:
             mqtt_cli.pub(self.status_topic, payload='Not available')
-            mqtt_cli.pub('/oxe/bt_spkr_vw/notification','Speaker not available or not paired')
+            mqtt_cli.pub('/oxe/bt_spkr/notification','Speaker not available or not paired')
             return
         self.send_msg_connect_state()
     
@@ -414,16 +414,26 @@ class OxeSpot:
         #=============================================
         self.print_audio_sources()
         self.print_audio_sinks()
+        
+        #set default capture source of card 1 (USB) to Mic
+        os.system('amixer -c 1 cset \'numid=16\' 0')
+        #amixer -c 1 cget 'numid=16' :
+        # type=ENUMERATED,access=rw------,values=1,items=4
+        # Item #0 'Mic'
+        # Item #1 'Line'
+        # Item #2 'IEC958 In'
+        # Item #3 'Mixer'
+        # values=0
+        
 
         #=============================================
         # Callbacks
         #=============================================
-
         mqtt_cli.add_msg_handler('/oxe/app',self.on_msg)
         
-        mqtt_cli.add_msg_handler('/oxe/main/conf/select', home_vw.on_msg_conf_select)    
-        mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl1/vol', home_vw.on_msg_vol_ctrl1_vol)    
-        mqtt_cli.add_msg_handler('/oxe/main/vol_ctrl2/vol', home_vw.on_msg_vol_ctrl2_vol)
+        mqtt_cli.add_msg_handler('/oxe/home/conf/select', home_vw.on_msg_conf_select)    
+        mqtt_cli.add_msg_handler('/oxe/home/vol_ctrl1/vol', home_vw.on_msg_vol_ctrl1_vol)    
+        mqtt_cli.add_msg_handler('/oxe/home/vol_ctrl2/vol', home_vw.on_msg_vol_ctrl2_vol)
 
         mqtt_cli.add_msg_handler('/oxe/bt_spkr_vw/select', bt_spkr_vw.on_msg_select)
         mqtt_cli.add_msg_handler('/oxe/bt_spkr_vw/connect',bt_spkr_vw.on_msg_connect)
@@ -446,15 +456,19 @@ class OxeSpot:
         bt_service.adapter_on(hci1_dev)
         bt_service.adapter_set_alias(hci0_dev, hci0_alias)
         bt_service.adapter_set_alias(hci1_dev, hci1_alias)
-        bt_service.adapter_set_discoverable(hci0_dev)  
+        bt_service.adapter_set_discoverable(hci0_dev)
         hci0 = bt_service.adapter_get_instance(hci0_dev)
         hci1 = bt_service.adapter_get_instance(hci1_dev)
-        hci1.on_connect = bt_spkr_vw.on_connect
-        hci1.on_disconnect = bt_spkr_vw.on_disconnect
+        if hci0 != None:
+            hci0.on_connect = bt_spkr_vw.on_connect
+            hci0.on_disconnect = bt_spkr_vw.on_disconnect
+        if hci1 != None:
+            hci1.on_connect = bt_spkr_vw.on_connect
+            hci1.on_disconnect = bt_spkr_vw.on_disconnect
 
         #=============================================
         logger.info('ready')
-        mqtt_cli.pub('/oxe/status', payload='ready')
+        mqtt_cli.pub('/oxe/home/status', payload='ready')
 
 
     def on_msg(self,topic, payload):
