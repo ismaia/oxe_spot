@@ -314,7 +314,7 @@ class BtSpeakerView:
 
 
     def send_msg_select_spkr(self):
-        mqtt_cli.pub(self.status_topic, payload='select a speaker')
+        mqtt_cli.pub(self.status_topic,'select a speaker')
     
 
     def on_connect(self,dev):
@@ -332,19 +332,20 @@ class BtSpeakerView:
         self.send_msg_connect_state()
 
     def send_msg_connect_state(self):
+        time.sleep(4) #wait stable connection
         if self.bt_spkr_dev == None:
-            mqtt_cli.pub(self.status_topic, payload='not connected')
+            mqtt_cli.pub(self.status_topic, 'not connected')
             return        
         if self.bt_spkr_dev.connected:
-            mqtt_cli.pub(self.status_topic, payload='connected')            
+            mqtt_cli.pub(self.status_topic, 'connected')            
         else:
-            mqtt_cli.pub(self.status_topic, payload='not connected')
+            mqtt_cli.pub(self.status_topic, 'not connected')
 
 
     def on_msg_select(self,topic, payload):
         self.bt_spkr_dev = bt_service.get_device_by_name(payload,self.default_hci)
         if self.bt_spkr_dev == None:
-            mqtt_cli.pub(self.status_topic, payload='Not available')
+            mqtt_cli.pub(self.status_topic, 'Not available')
             mqtt_cli.pub('/oxe/bt_spkr/notification','Speaker not available or not paired')
             return
         self.send_msg_connect_state()
@@ -359,7 +360,7 @@ class BtSpeakerView:
                 logger.info('[%s %s] already connected', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
                 return
 
-            mqtt_cli.pub(self.status_topic, payload='connecting...')
+            mqtt_cli.pub(self.status_topic, 'connecting...')
             logger.info('connecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
             self.bt_spkr_dev.connect()
         except:
@@ -372,7 +373,7 @@ class BtSpeakerView:
             if self.bt_spkr_dev == None:
                 self.send_msg_select_spkr()
                 return
-            mqtt_cli.pub(self.status_topic, payload='disconnecting...')
+            mqtt_cli.pub(self.status_topic, 'disconnecting...')
             logger.info('disconnecting [%s %s]', self.bt_spkr_dev.address, self.bt_spkr_dev.alias)
             self.bt_spkr_dev.disconnect()
         except:
@@ -435,9 +436,9 @@ class OxeSpot:
         mqtt_cli.add_msg_handler('/oxe/home/vol_ctrl1/vol', home_vw.on_msg_vol_ctrl1_vol)    
         mqtt_cli.add_msg_handler('/oxe/home/vol_ctrl2/vol', home_vw.on_msg_vol_ctrl2_vol)
 
-        mqtt_cli.add_msg_handler('/oxe/bt_spkr_vw/select', bt_spkr_vw.on_msg_select)
-        mqtt_cli.add_msg_handler('/oxe/bt_spkr_vw/connect',bt_spkr_vw.on_msg_connect)
-        mqtt_cli.add_msg_handler('/oxe/bt_spkr_vw/disconnect',bt_spkr_vw.on_msg_disconnect)
+        mqtt_cli.add_msg_handler('/oxe/bt_spkr/select', bt_spkr_vw.on_msg_select)
+        mqtt_cli.add_msg_handler('/oxe/bt_spkr/connect',bt_spkr_vw.on_msg_connect)
+        mqtt_cli.add_msg_handler('/oxe/bt_spkr/disconnect',bt_spkr_vw.on_msg_disconnect)
 
 
         #=============================================
