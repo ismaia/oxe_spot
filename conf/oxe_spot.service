@@ -1,0 +1,9 @@
+[Unit]
+Description=Oxe Spot Service
+
+[Service]
+WorkingDirectory=/home/isaac/oxe_spot_snap
+ExecStart=/usr/bin/python3 /home/isaac/oxe_spot_snap/oxe_spot.py
+
+[Install]
+WantedBy=default.target
