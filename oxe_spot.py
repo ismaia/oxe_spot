@@ -279,7 +279,7 @@ class BtSpeakerView:
         self.bt_spkr_dev = None #Device object
         self.status_topic = '/oxe/bt_spkr/status'
         self.bt_spkr_list = '/oxe/bt_spkr/list'       
-        self.default_hci  = 'hci1'         
+        self.default_hci  = 'hci0'
 
     def init(self):
         self.load_conf()
