@@ -1,9 +1,9 @@
 [Unit]
-Description=Oxe Spot Watchdog
+Description=Oxe Spot Daemon
 
 [Service]
 WorkingDirectory=/home/pi/oxe_spot
-ExecStart=/home/pi/oxe_spot/scripts/oxe_watchdog.sh
+ExecStart=/home/pi/oxe_spot/scripts/oxe_spotd.sh
 
 [Install]
 WantedBy=default.target
