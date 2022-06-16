@@ -10,6 +10,7 @@ fi
 
 
 oxe_pid=""
+status=""
 
 function cleanup_subprocs() {
   kill $(jobs -p) &> /dev/null
@@ -28,7 +29,8 @@ function cleanup_subprocs() {
 trap ctrl_c INT
 function ctrl_c() {
    echo "Terminating..."
-   mosquitto_pub -t "/oxe/home/status" -m "Off"
+   status="off"
+   mosquitto_pub -t "/oxe/home/status" -m "$status"
    cleanup_subprocs   
    exit
 }
@@ -37,15 +39,16 @@ cleanup_subprocs
 echo "OXE watchdog"
 mosquitto_sub -t "/oxe/app" > "$MAIN_PIPE" & 
 
-function start_oxe_spot() {
+function start_oxe_spot() 
+{
     if [ "$oxe_pid" == "" ]; then
        kill -SIGINT $oxe_pid &>/dev/null           
        echo "starting oxe_spot..."
        /usr/bin/python3 $HOME/oxe_spot/oxe_spot.py &
        oxe_pid=$!
        if [ ! -z $oxe_pid ]; then 
-        mosquitto_pub -t "/oxe/home/status" -m "ready"
-        mosquitto_pub -t "/oxe/home/status" -m "ready"
+        status="ready"
+        mosquitto_pub -t "/oxe/home/status" -m "$status"
        fi
     else        
        echo "oxe_spot already running!"
@@ -53,15 +56,16 @@ function start_oxe_spot() {
 }
 
 
-function stop_oxe_spot() {
-    mosquitto_pub -t "/oxe/home/status" -m "Off"
+function stop_oxe_spot() 
+{
+    status="off"
+    mosquitto_pub -t "/oxe/home/status" -m "$status"    
     if [ ! -z $oxe_pid ]; then 
        echo "killing pid=$oxe_pid"
        kill -SIGINT $oxe_pid
        oxe_pid=""
     fi
 }
-
 
 function main_loop()
 {
@@ -81,11 +85,14 @@ function main_loop()
             echo "exec reboot"
             sudo systemctl reboot
             ;;
+        "status"*)
+            echo "exec status"
+            mosquitto_pub -t "/oxe/home/status" -m "$status"
+            ;;    
         "suspend"*)
             echo "exec suspend"
             sudo systemctl suspend
             ;;
-    
         "poweroff"*)
             echo "exec poweroff"
             sudo systemctl poweroff
