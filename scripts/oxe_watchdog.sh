@@ -37,17 +37,14 @@ echo "OXE watchdog"
 mosquitto_sub -t "/oxe/app" > "$MAIN_PIPE" & 
 mosquitto_pub -t "/oxe/home/status" -m "Off"
 
-while true
-do
-if read cmd <$MAIN_PIPE; 
-then      
+while read cmd <$MAIN_PIPE ; 
+do    
     echo "cmd : $cmd"
     case "$cmd" in
     "start"*)
         echo "received start cmd"
         if [ "$oxe_pid" == "" ]; then
-           kill -SIGINT $oxe_pid &>/dev/null
-           mosquitto_pub -t "/oxe/app" -m "stop"           
+           kill -SIGINT $oxe_pid &>/dev/null           
            echo "starting oxe_spot..."
            /usr/bin/python3 $HOME/oxe_spot/oxe_spot.py &
            oxe_pid=$!
@@ -57,9 +54,12 @@ then
         ;;
     "stop"*)
         echo "received stop cmd"
-        mosquitto_pub -t "/oxe/app" -m "stop"
         mosquitto_pub -t "/oxe/home/status" -m "Off"
-        oxe_pid=""
+        if [[ ! -z $oxe_pid ]]; then 
+           echo "killing pid=$oxe_pid"
+           kill -SIGINT $oxe_pid
+           oxe_pid=""
+        fi
         ;;
     "reboot"*)
         echo "received reboot cmd"
@@ -75,5 +75,4 @@ then
         sudo systemctl poweroff
         ;;
     esac
-fi
 done
