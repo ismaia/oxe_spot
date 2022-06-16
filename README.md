@@ -99,7 +99,7 @@ systemctl --user start pulseaudio.service
 systemctl --user status pulseaudio.{service,socket}
 ```
 
-Showing logs on a running system:
+Showing logs:
 
 ```
 journalctl -f --user-unit oxe_spot.service
