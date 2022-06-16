@@ -14,6 +14,6 @@ All communication between backend<->frontend is made by MQTT message passing
 
 ### Install Dependencies 
 ```
-sudo apt install python3-dbus python3-paho-mqtt python3-pip mosquitto mosquitto-clients 
+sudo apt install python3-dbus python3-paho-mqtt python3-pip mosquitto mosquitto-clients pulseaudio pulseaudio-module-bluetooth
 sudo pip3 install bluezero pulsectl 
 ```
