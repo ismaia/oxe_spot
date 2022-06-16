@@ -49,7 +49,7 @@ then
            kill -SIGINT $oxe_pid &>/dev/null
            mosquitto_pub -t "/oxe/app" -m "stop"           
            echo "starting oxe_spot..."
-           /usr/bin/python3 /home/isaac/oxe_spot_snap/oxe_spot.py &
+           /usr/bin/python3 $HOME/oxe_spot/oxe_spot.py &
            oxe_pid=$!
         else        
            echo "oxe_spot already running!"
