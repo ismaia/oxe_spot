@@ -21,6 +21,20 @@ sudo pip3 install bluezero pulsectl
 
 ### Installation (user space) 
 
+Put the user in the audio group 
+```
+sudo usermod -G audio $USER
+```
+
+
+`/etc/security/limits.d/audio.conf`:
+
+```
+@audio           -       rtprio          99
+@audio           -       memlock         unlimited
+@audio           -       nice            -10
+```
+
 
 `~/.config/systemd/user/pulseaudio.service`:
 
