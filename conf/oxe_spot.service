@@ -2,8 +2,8 @@
 Description=Oxe Spot Watchdog
 
 [Service]
-WorkingDirectory=/home/isaac/oxe_spot_snap
-ExecStart=/home/isaac/oxe_spot_snap/scripts/oxe_watchdog.sh
+WorkingDirectory=/home/pi/oxe_spot
+ExecStart=/home/pi/oxe_spot/scripts/oxe_watchdog.sh
 
 [Install]
 WantedBy=default.target
